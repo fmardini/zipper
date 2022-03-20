@@ -1,4 +1,4 @@
-name: zipper
+name: functional_zipper
 description: A library implementing functional zippers
 version: 0.0.1
 repository: https://github.com/fmardini/zipper

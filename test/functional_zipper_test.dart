@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:zipper/zipper.dart';
+import 'package:functional_zipper/functional_zipper.dart';
 
 abstract class ZipperTree {}
 
