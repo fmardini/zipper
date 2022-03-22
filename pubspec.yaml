@@ -1,5 +1,5 @@
 name: functional_zipper
-description: A library implementing functional zippers
+description: A library implementing functional zippers following Huet's paper.
 version: 0.0.1
 repository: https://github.com/fmardini/zipper
 
