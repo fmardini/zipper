@@ -11,7 +11,7 @@ typedef SectionP = bool Function(dynamic b);
 typedef GetChildren<ZR, ZS> = List<ZR> Function(ZS section);
 
 /// Given a list of children, create a `Section` contianing them
-typedef MakeSection<ZR, ZS> = ZS Function(List<ZR> children);
+typedef MakeSection<ZR, ZS> = ZS Function(ZS node, List<ZR> children);
 
 /// Poor man's algebraic data type
 /// type path =
@@ -27,13 +27,17 @@ class TopPath<T> extends Path<T> {}
 
 /// Node path
 @immutable
-class NodePath<T> extends Path<T> {
+class NodePath<ZS, T> extends Path<T> {
   final List<T> left;
   final List<T> right;
   final Path<T> parentPath;
+  final ZS parentNode;
 
   const NodePath(
-      {required this.left, required this.right, required this.parentPath});
+      {required this.left,
+      required this.right,
+      required this.parentPath,
+      required this.parentNode});
 }
 
 /// The main driver of our implementation
@@ -84,7 +88,7 @@ class ZipperLocation<ZR, ZI extends ZR, ZS extends ZR> {
     if (path is TopPath) {
       throw Exception("Left of top");
     }
-    NodePath<ZR> p = path as NodePath<ZR>;
+    NodePath<ZS, ZR> p = path as NodePath<ZS, ZR>;
     if (p.left.isEmpty) {
       throw Exception("left of first");
     }
@@ -97,6 +101,7 @@ class ZipperLocation<ZR, ZI extends ZR, ZS extends ZR> {
         left: newLeft,
         right: newRight,
         parentPath: p.parentPath,
+        parentNode: p.parentNode,
       ),
     );
   }
@@ -106,7 +111,7 @@ class ZipperLocation<ZR, ZI extends ZR, ZS extends ZR> {
     if (path is TopPath) {
       throw Exception("right of top");
     }
-    NodePath<ZR> p = path as NodePath<ZR>;
+    NodePath<ZS, ZR> p = path as NodePath<ZS, ZR>;
     if (p.right.isEmpty) {
       throw Exception("right of last");
     }
@@ -119,6 +124,7 @@ class ZipperLocation<ZR, ZI extends ZR, ZS extends ZR> {
         left: newLeft,
         right: newRight,
         parentPath: p.parentPath,
+        parentNode: p.parentNode,
       ),
     );
   }
@@ -128,10 +134,10 @@ class ZipperLocation<ZR, ZI extends ZR, ZS extends ZR> {
     if (path is TopPath) {
       throw Exception("up of top");
     }
-    NodePath<ZR> p = path as NodePath<ZR>;
+    NodePath<ZS, ZR> p = path as NodePath<ZS, ZR>;
     List<ZR> cs = List.unmodifiable([...p.left.reversed, node, ...p.right]);
 
-    return update(node: makeSection(cs), path: p.parentPath);
+    return update(node: makeSection(p.parentNode, cs), path: p.parentPath);
   }
 
   /// Move down the tree
@@ -147,10 +153,11 @@ class ZipperLocation<ZR, ZI extends ZR, ZS extends ZR> {
 
     return update(
       node: cs.first,
-      path: NodePath<ZR>(
+      path: NodePath<ZS, ZR>(
         left: List<ZR>.unmodifiable([]),
         right: List<ZR>.unmodifiable(cs.skip(1)),
         parentPath: path,
+        parentNode: node,
       ),
     );
   }
@@ -165,12 +172,13 @@ class ZipperLocation<ZR, ZI extends ZR, ZS extends ZR> {
     if (path is TopPath) {
       throw Exception("insert of top");
     }
-    final p = path as NodePath<ZR>;
+    final p = path as NodePath<ZS, ZR>;
     return update(
       node: node,
       path: NodePath(
         left: p.left,
         parentPath: p.parentPath,
+        parentNode: p.parentNode,
         right: List.unmodifiable([r, ...p.right]),
       ),
     );
@@ -181,12 +189,13 @@ class ZipperLocation<ZR, ZI extends ZR, ZS extends ZR> {
     if (path is TopPath) {
       throw Exception("insert of top");
     }
-    final p = path as NodePath<ZR>;
+    final p = path as NodePath<ZS, ZR>;
     return update(
       node: node,
       path: NodePath(
         left: List.unmodifiable([r, ...p.left]),
         parentPath: p.parentPath,
+        parentNode: p.parentNode,
         right: p.right,
       ),
     );
@@ -201,22 +210,23 @@ class ZipperLocation<ZR, ZI extends ZR, ZS extends ZR> {
 
     return update(
       node: d,
-      path: NodePath(
-        left: List.unmodifiable([]),
+      path: NodePath<ZS, ZR>(
+        left: List<ZR>.unmodifiable([]),
         parentPath: path,
+        parentNode: node,
         right: getChildren(t),
       ),
     );
   }
 
-  /// Remove a node from the zipper
+  /// Remove the current node from the zipper
   /// We first try to move to the right
   /// then to the left, and otherwise up
   ZipperLocation<ZR, ZI, ZS> delete() {
     if (path is TopPath) {
       throw Exception("delete of top");
     }
-    final p = path as NodePath<ZR>;
+    final p = path as NodePath<ZS, ZR>;
 
     if (p.right.isNotEmpty) {
       return update(
@@ -224,6 +234,7 @@ class ZipperLocation<ZR, ZI extends ZR, ZS extends ZR> {
         path: NodePath(
           left: p.left,
           parentPath: p.parentPath,
+          parentNode: p.parentNode,
           right: List.unmodifiable(p.right.skip(1)),
         ),
       );
@@ -233,12 +244,13 @@ class ZipperLocation<ZR, ZI extends ZR, ZS extends ZR> {
         path: NodePath(
           left: List.unmodifiable(p.left.skip(1)),
           parentPath: p.parentPath,
+          parentNode: p.parentNode,
           right: p.right,
         ),
       );
     } else {
       return update(
-        node: makeSection(List.unmodifiable([])),
+        node: makeSection(p.parentNode, List.unmodifiable([])),
         path: p.parentPath,
       );
     }

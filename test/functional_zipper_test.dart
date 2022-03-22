@@ -10,7 +10,8 @@ class ZipperTreeItem extends ZipperTree {
 
 class ZipperTreeSection extends ZipperTree {
   final List<ZipperTree> children;
-  ZipperTreeSection(this.children);
+  final String name;
+  ZipperTreeSection(this.children, this.name);
 }
 
 typedef TreeZipper
@@ -20,16 +21,21 @@ TreeZipper build() {
   return ZipperLocation.root(
     sectionP: (b) => b is ZipperTreeSection,
     getChildren: (ZipperTreeSection sec) => sec.children,
-    makeSection: (List<ZipperTree> cs) => ZipperTreeSection(cs),
-    node: ZipperTreeSection(List.unmodifiable([
-      ZipperTreeItem(1),
-      ZipperTreeItem(2),
-      ZipperTreeSection(
-        List.unmodifiable([
-          ZipperTreeItem(3),
-        ]),
-      ),
-    ])),
+    makeSection: (ZipperTreeSection sec, List<ZipperTree> cs) =>
+        ZipperTreeSection(cs, sec.name),
+    node: ZipperTreeSection(
+      List.unmodifiable([
+        ZipperTreeItem(1),
+        ZipperTreeItem(2),
+        ZipperTreeSection(
+          List.unmodifiable([
+            ZipperTreeItem(3),
+          ]),
+          "offspring",
+        ),
+      ]),
+      "root",
+    ),
   );
 }
 
@@ -55,9 +61,15 @@ void main() {
     expect(res.node, isA<ZipperTreeItem>());
     expect((res.node as ZipperTreeItem).item, 3);
 
-    res = res.goUp().goLeft();
+    res = res.goUp();
+    expect((res.node as ZipperTreeSection).name, "offspring");
+    res = res.goLeft();
     expect(res.node, isA<ZipperTreeItem>());
     expect((res.node as ZipperTreeItem).item, 2);
+
+    res = res.goUp();
+    expect(res.path, isA<TopPath>());
+    expect((res.node as ZipperTreeSection).name, "root");
   });
 
   test('modification', () {
@@ -87,6 +99,7 @@ void main() {
     res = res.delete();
     expect(res.node, isA<ZipperTreeSection>());
     expect((res.node as ZipperTreeSection).children, isEmpty);
+    expect((res.node as ZipperTreeSection).name, "offspring");
 
     res = res.delete();
     expect((res.node as ZipperTreeItem).item, 2);
